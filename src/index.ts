@@ -211,7 +211,7 @@ function main() {
 	const vrButt = document.querySelector("#vrMode") as HTMLButtonElement;
 	vrButt.onclick = () => {
 		if(xr.hasXR()) 
-			xr.initXR(gl, loopXR, () => {alert("vr inited?")});
+			xr.initXR(gl, loopXR);
 	};
 
 	canvas.width = canvas.clientWidth;
