@@ -1,9 +1,6 @@
 import { mat4, vec3 } from "gl-matrix";
-import { Model } from "./graphics/model";
 import { Shader, BaseShader, WaterShader, MainShader } from "./graphics/shader";
-import { Water } from "./world/water";
 import * as assets from "./graphics/assets";
-import { worldRand } from "./util/random";
 import * as xr from "./graphics/xr";
 import { Planet } from "./world/planet";
 
@@ -16,15 +13,11 @@ let waterShader: WaterShader;
 
 let mainShader: MainShader;
 
-let testAngle = 0;
-
-let cameraPos: vec3 = [0, 1.5, 0];
+let cameraPos: vec3 = [9, 11, 1];
 let cameraYaw: number = 0;
 let cameraPitch: number = 0;
 
 let keys: {[id: string] : boolean} = {};
-
-let water: Water;
 
 let mercury: Planet;
 let venus: Planet;
@@ -35,23 +28,23 @@ function init() {
 
 	assets.initAssets(gl);
 
-	mercury = new Planet("Mercury", 0.1, 0, 0.5, 
+	mercury = new Planet("Mercury", 1, 0, 0.5, 
 		assets.mercuryTexture, assets.mercuryTextureLow);
 	mercury.x = 0;
-	mercury.y = 1;
-	venus = new Planet("Venus", 0.1, 0, 0.5, 
+	mercury.y = 10;
+	venus = new Planet("Venus", 1, 0, 0.5, 
 		assets.venusTexture, assets.venusTextureLow);
-	venus.x = 0.3;
-	venus.y = 1;
-	earth = new Planet("Earth", 0.1, 23.44 * Math.PI / 180, 0.5, 
+	venus.x = 3;
+	venus.y = 10;
+	earth = new Planet("Earth", 1, 23.44 * Math.PI / 180, 0.5, 
 		assets.earthTexture, assets.earthTextureLow, assets.cloudTexture);
-	earth.x = 0.6;
-	earth.y = 1;
+	earth.x = 6;
+	earth.y = 10;
 
 	let fov = 45 * Math.PI / 180; //this has been vertical fov the whole time
 	let aspect = (gl.canvas as HTMLCanvasElement).clientWidth / (gl.canvas as HTMLCanvasElement).clientHeight;
-	let zNear = 0.01;
-	let zFar = 20.0;
+	let zNear = 0.1;
+	let zFar = 100.0;
 	let projection = mat4.create();
 
 	mat4.perspective(projection, fov, aspect, zNear, zFar);
@@ -75,7 +68,7 @@ function update(delta: number) {
 	venus.update(delta);
 	earth.update(delta);
 
-	let speed = 0.15;
+	let speed = 2;
 	if(keys["KeyD"]) {
 		vec3.add(cameraPos, cameraPos, [Math.cos(-cameraYaw) * delta * speed, 0, Math.sin(-cameraYaw) * delta * speed]);
 	}
@@ -100,21 +93,18 @@ function renderFloor(shader: BaseShader) {
 	mercury.draw(shader, cameraPos);
 	venus.draw(shader, cameraPos);
 	earth.draw(shader, cameraPos);
-	// setLightTowardsCenter([Math.cos(testAngle) * 5, 5, Math.sin(testAngle) * 5]);
 }
 
 function renderMain(shader: BaseShader) {
 	
 	let transform = mat4.create();
-	mat4.scale(transform, transform, [10, 10, 10]);
+	mat4.scale(transform, transform, [100, 100, 100]);
 	shader.loadTransform(transform);
 
 	shader.loadTexture(assets.emptyTexture, 0);
 	shader.loadTexture(assets.skyboxTexture, 1);
 
 	assets.skyboxModel.draw(shader);
-
-	// setLightTowardsCenter([Math.cos(testAngle) * 5, 5, Math.sin(testAngle) * 5]);
 }
 
 function draw(gl: WebGL2RenderingContext) {
@@ -131,9 +121,7 @@ function draw(gl: WebGL2RenderingContext) {
 	gl.clearDepth(1.0);
 	gl.depthFunc(gl.LEQUAL);
 
-	// gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, assets.cloudTexture);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 	let camera = mat4.create();
 	mat4.translate(camera, camera, cameraPos);
@@ -142,31 +130,12 @@ function draw(gl: WebGL2RenderingContext) {
 	mat4.invert(camera, camera);
 	shader.loadCamera(camera);
 
-	// let camera = mat4.ortho(mat4.create(), -5, 5, -5, 5, 0.1, 20);
-    // let lookDown = mat4.create();
-    // mat4.translate(lookDown, lookDown, [0, 10, 0]);
-    // mat4.rotateX(lookDown, lookDown, -Math.PI / 2);
-    // mat4.invert(lookDown, lookDown);
-    // mat4.mul(camera, camera, lookDown);
-
-	// shader.loadProjection(mat4.create());
-	// shader.loadCamera(camera);
-
 	renderFloor(shader);
 
 	mainShader.use();
 	mainShader.loadCamera(camera);
 
 	renderMain(mainShader);
-
-	if(water) {
-		waterShader.use();
-		// waterShader.loadProjection(mat4.create());
-		waterShader.loadCamera(camera);
-		waterShader.loadTime(testAngle);
-		waterShader.loadTransform(mat4.create());
-		water.draw(waterShader, camera[0], camera[2]);
-	}
 }
 
 function drawXR(gl: WebGL2RenderingContext, viewRef: XRReferenceSpace, frame: XRFrame) {
@@ -193,8 +162,6 @@ function drawXR(gl: WebGL2RenderingContext, viewRef: XRReferenceSpace, frame: XR
 		shader.use();
 		const viewport = session.renderState.baseLayer.getViewport(view);
 		gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-		gl.activeTexture(gl.TEXTURE0);
-		gl.bindTexture(gl.TEXTURE_2D, assets.cloudTexture);
 
 		shader.loadCamera(view.transform.inverse.matrix);
 		shader.loadProjection(view.projectionMatrix);
@@ -206,15 +173,6 @@ function drawXR(gl: WebGL2RenderingContext, viewRef: XRReferenceSpace, frame: XR
 		mainShader.loadProjection(view.projectionMatrix);
 
 		renderMain(mainShader);
-
-		if(water) {
-			waterShader.use();
-			waterShader.loadCamera(view.transform.inverse.matrix);
-			waterShader.loadProjection(view.projectionMatrix);
-			waterShader.loadTime(testAngle);
-			waterShader.loadTransform(mat4.create());
-			water.draw(waterShader, view.transform.position.x, view.transform.position.z);
-		}
 	}
 }
 
