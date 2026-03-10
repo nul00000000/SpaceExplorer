@@ -1,20 +1,33 @@
 import { Model } from "./model";
 import { vec3, mat3, vec2 } from "gl-matrix";
 
-export let treeTexture: WebGLTexture;
-
+export let mercuryTexture: WebGLTexture;
+export let mercuryTextureLow: WebGLTexture;
+export let venusTexture: WebGLTexture;
+export let venusTextureLow: WebGLTexture;
 export let earthTexture: WebGLTexture;
+export let earthTextureLow: WebGLTexture;
 export let cloudTexture: WebGLTexture;
+
+export let skyboxTexture: WebGLTexture;
 
 export let testTexture: WebGLTexture;
 export let emptyTexture: WebGLTexture;
 
 export let icosphereModel: Model;
+export let skyboxModel: Model;
 
 export function initAssets(gl: WebGL2RenderingContext) {
-    treeTexture = loadTexture("assests/planets/earth/day.jpg", gl);
+    mercuryTexture = loadTexture("assests/planets/mercury/day8k.jpg", gl, true);
+    mercuryTextureLow = loadTexture("assests/planets/mercury/day.jpg", gl, true);
+    venusTexture = loadTexture("assests/planets/venus/day8k.jpg", gl, true);
+    venusTextureLow = loadTexture("assests/planets/venus/day.jpg", gl, true);
     earthTexture = loadTexture("assests/planets/earth/day8k.jpg", gl, true);
+    earthTextureLow = loadTexture("assests/planets/earth/day.jpg", gl, true);
     cloudTexture = loadTexture("assests/planets/earth/cloud.jpg", gl, true);
+    
+    skyboxTexture = loadTexture("assests/sky.jpg", gl, true);
+    
     testTexture = loadTexture("assests/planets/test.png", gl, true);
     emptyTexture = loadTexture("assests/planets/empty.png", gl, true);
 
@@ -25,6 +38,18 @@ export function initAssets(gl: WebGL2RenderingContext) {
     addIcosehedron(icoVerts, icoUVs, icoIndices, 0, 0, 0, 1, 4);
 
     icosphereModel = new Model(gl, icoVerts, icoUVs, icoIndices, false, icoVerts);
+
+    // let skyVerts: number[] = [];
+    // let skyUVs: number[] = [];
+    let skyIndices: number[] = [];
+
+    for(let i = 0; i < icoIndices.length / 3; i++) {
+        skyIndices.push(icoIndices[i * 3], icoIndices[i * 3 + 2], icoIndices[i * 3 + 1]);
+    }
+
+    // addIcosehedron(skyVerts, skyUVs, skyIndices, 0, 0, 0, 1, 4, true);
+
+    skyboxModel = new Model(gl, icoVerts, icoUVs, skyIndices, false, icoVerts);
 }
 
 function indexOfPoint(list: vec3[], point: vec3, minDist = 0.001): number {
@@ -36,7 +61,7 @@ function indexOfPoint(list: vec3[], point: vec3, minDist = 0.001): number {
     return -1;
 }
 
-function addIcosehedron(vertices: number[], uvs: number[], indices: number[], x: number, y: number, z: number, r: number, subs = 0, along: vec3 = [0, 1, 0]) {
+function addIcosehedron(vertices: number[], uvs: number[], indices: number[], x: number, y: number, z: number, r: number, subs = 0, insideOut = false, along: vec3 = [0, 1, 0]) {
     //regular icosehedron time
     //did you know the vertices are the corners of three orthogonal 1xphi rectangles (but here we normalize it)
 
@@ -67,37 +92,71 @@ function addIcosehedron(vertices: number[], uvs: number[], indices: number[], x:
     verts.push([-c,  -a,  0]);
     verts.push([-c,   a,  0]);
 
-    //xz edge triangles
-    inds.push([1, 0, 4]);
-    inds.push([0, 1, 7]);
+    if(!insideOut) {
+        //xz edge triangles
+        inds.push([1, 0, 4]);
+        inds.push([0, 1, 7]);
 
-    inds.push([3, 2, 5]);
-    inds.push([2, 3, 6]);
+        inds.push([3, 2, 5]);
+        inds.push([2, 3, 6]);
 
-    //yz edge triangles
-    inds.push([5, 4, 8]);
-    inds.push([4, 5, 11]);
+        //yz edge triangles
+        inds.push([5, 4, 8]);
+        inds.push([4, 5, 11]);
 
-    inds.push([7, 6, 9]);
-    inds.push([6, 7, 10]);
+        inds.push([7, 6, 9]);
+        inds.push([6, 7, 10]);
 
-    //xy edge triangles
-    inds.push([9, 8, 0]);
-    inds.push([8, 9, 3]);
+        //xy edge triangles
+        inds.push([9, 8, 0]);
+        inds.push([8, 9, 3]);
 
-    inds.push([11, 10, 1]);
-    inds.push([10, 11, 2]);
+        inds.push([11, 10, 1]);
+        inds.push([10, 11, 2]);
 
-    //corner triangles (the other eight)
-    inds.push([4, 0, 8]); //+x+y+z
-    inds.push([3, 5, 8]); //+x+y-z
-    inds.push([0, 7, 9]); //+x-y+z
-    inds.push([1, 4, 11]); //-x+y+z
-    
-    inds.push([7, 1, 10]); //-x-y+z
-    inds.push([5, 2, 11]); //-x+y-z
-    inds.push([6, 3, 9]); //+x-y-z
-    inds.push([2, 6, 10]); //-x-y-z
+        //corner triangles (the other eight)
+        inds.push([4, 0, 8]); //+x+y+z
+        inds.push([3, 5, 8]); //+x+y-z
+        inds.push([0, 7, 9]); //+x-y+z
+        inds.push([1, 4, 11]); //-x+y+z
+        
+        inds.push([7, 1, 10]); //-x-y+z
+        inds.push([5, 2, 11]); //-x+y-z
+        inds.push([6, 3, 9]); //+x-y-z
+        inds.push([2, 6, 10]); //-x-y-z
+    } else {
+        //xz edge triangles
+        inds.push([1, 4, 0]);
+        inds.push([0, 7, 1]);
+
+        inds.push([3, 5, 2]);
+        inds.push([2, 6, 3]);
+
+        //yz edge triangles
+        inds.push([5, 8, 4]);
+        inds.push([4, 11, 5]);
+
+        inds.push([7, 9, 6]);
+        inds.push([6, 10, 7]);
+
+        //xy edge triangles
+        inds.push([9, 0, 8]);
+        inds.push([8, 3, 9]);
+
+        inds.push([11, 1, 10]);
+        inds.push([10, 2, 11]);
+
+        //corner triangles (the other eight)
+        inds.push([4, 8, 0]); //+x+y+z
+        inds.push([3, 8, 5]); //+x+y-z
+        inds.push([0, 9, 7]); //+x-y+z
+        inds.push([1, 11, 4]); //-x+y+z
+        
+        inds.push([7, 10, 1]); //-x-y+z
+        inds.push([5, 11, 2]); //-x+y-z
+        inds.push([6, 9, 3]); //+x-y-z
+        inds.push([2, 10, 6]); //-x-y-z
+    }
 
     for(let i = 0; i < subs; i++) {
         let newVerts: vec3[] = [];

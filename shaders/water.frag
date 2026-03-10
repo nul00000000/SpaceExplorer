@@ -20,6 +20,6 @@ void main(void) {
 
     //vec4 epic = calculateFoam();
     // float epic = texture(waterMap, uvCoords).r < 0.5 ? 1.0 : 0.0;
-    fragColor = vec4(vec3(0, 0, 1.0) * illumination, 0.5);
+    fragColor = vec4(vec3(0, 0, 1.0) * illumination, 1.0);
     // fragColor = vec4((fragPosLightSpaceLand.xyz / fragPosLightSpaceLand.w) * 0.5 + 0.5, 1.0);
 }

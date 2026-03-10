@@ -1,11 +1,11 @@
 import { mat4, vec3 } from "gl-matrix";
 import { Model } from "./graphics/model";
 import { Shader, BaseShader, WaterShader, MainShader } from "./graphics/shader";
-import { Floor } from "./world/terrain";
 import { Water } from "./world/water";
 import * as assets from "./graphics/assets";
 import { worldRand } from "./util/random";
 import * as xr from "./graphics/xr";
+import { Planet } from "./world/planet";
 
 let gl: WebGL2RenderingContext;
 let canvas: HTMLCanvasElement;
@@ -24,17 +24,29 @@ let cameraPitch: number = 0;
 
 let keys: {[id: string] : boolean} = {};
 
-let floor: Floor;
 let water: Water;
+
+let mercury: Planet;
+let venus: Planet;
+let earth: Planet;
 
 function init() {
 	shader.use();
 
 	assets.initAssets(gl);
 
-	floor = new Floor(0.1, 100, 100, gl, (floor: Floor) => {
-
-	});
+	mercury = new Planet("Mercury", 0.1, 0, 0.5, 
+		assets.mercuryTexture, assets.mercuryTextureLow);
+	mercury.x = 0;
+	mercury.y = 1;
+	venus = new Planet("Venus", 0.1, 0, 0.5, 
+		assets.venusTexture, assets.venusTextureLow);
+	venus.x = 0.3;
+	venus.y = 1;
+	earth = new Planet("Earth", 0.1, 23.44 * Math.PI / 180, 0.5, 
+		assets.earthTexture, assets.earthTextureLow, assets.cloudTexture);
+	earth.x = 0.6;
+	earth.y = 1;
 
 	let fov = 45 * Math.PI / 180; //this has been vertical fov the whole time
 	let aspect = (gl.canvas as HTMLCanvasElement).clientWidth / (gl.canvas as HTMLCanvasElement).clientHeight;
@@ -45,7 +57,7 @@ function init() {
 	mat4.perspective(projection, fov, aspect, zNear, zFar);
 	shader.loadProjection(projection);
 
-	setLightTowardsCenter([1, 1, 1]);
+	setLightTowardsCenter([1, 0, 0]);
 
 	waterShader.use();
 	waterShader.loadProjection(projection);
@@ -59,8 +71,11 @@ function init() {
 }
 
 function update(delta: number) {
-	let speed = 0.1;
-	testAngle += 0.01;
+	mercury.update(delta);
+	venus.update(delta);
+	earth.update(delta);
+
+	let speed = 0.15;
 	if(keys["KeyD"]) {
 		vec3.add(cameraPos, cameraPos, [Math.cos(-cameraYaw) * delta * speed, 0, Math.sin(-cameraYaw) * delta * speed]);
 	}
@@ -82,27 +97,22 @@ function update(delta: number) {
 }
 
 function renderFloor(shader: BaseShader) {
-	let translation = mat4.create();
-
-	mat4.translate(translation, translation, [0, 1, 1]);
-	mat4.rotateY(translation, translation, testAngle);
-	mat4.scale(translation, translation, [0.1, 0.1, 0.1]);
-
-	shader.loadTransform(translation);
-
-	shader.loadTexture(assets.cloudTexture, 0);
-	shader.loadTexture(assets.earthTexture, 1);
-	
-	assets.icosphereModel.draw(shader);
-
-	shader.loadTransform(mat4.create());
-
-	floor.draw(shader, cameraPos[0], cameraPos[2]);
-
+	mercury.draw(shader, cameraPos);
+	venus.draw(shader, cameraPos);
+	earth.draw(shader, cameraPos);
 	// setLightTowardsCenter([Math.cos(testAngle) * 5, 5, Math.sin(testAngle) * 5]);
 }
 
 function renderMain(shader: BaseShader) {
+	
+	let transform = mat4.create();
+	mat4.scale(transform, transform, [10, 10, 10]);
+	shader.loadTransform(transform);
+
+	shader.loadTexture(assets.emptyTexture, 0);
+	shader.loadTexture(assets.skyboxTexture, 1);
+
+	assets.skyboxModel.draw(shader);
 
 	// setLightTowardsCenter([Math.cos(testAngle) * 5, 5, Math.sin(testAngle) * 5]);
 }
@@ -208,7 +218,7 @@ function drawXR(gl: WebGL2RenderingContext, viewRef: XRReferenceSpace, frame: XR
 	}
 }
 
-let lastTimestamp: number;
+let lastTimestamp: number = 0;
 
 function setLightTowardsCenter(lightPos: vec3) {
 	shader.use();

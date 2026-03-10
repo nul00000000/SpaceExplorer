@@ -19,7 +19,8 @@ void main(void) {
 
     vec3 normal = nNormal;
 
-    float illumination = 0.2 + max(0.0, -dot(lightDir, normal)) * 0.8;
+    //float illumination = 0.2 + max(0.0, -dot(lightDir, normal)) * 0.8;
+    float illumination = 1.0;
 
     vec3 color = texture(tex, uvCoords).rgb;
 
