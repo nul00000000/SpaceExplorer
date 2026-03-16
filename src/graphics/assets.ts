@@ -3,10 +3,13 @@ import { vec3, mat3, vec2 } from "gl-matrix";
 
 export let mercuryTexture: WebGLTexture;
 export let mercuryTextureLow: WebGLTexture;
+
 export let venusTexture: WebGLTexture;
 export let venusTextureLow: WebGLTexture;
+
 export let earthTexture: WebGLTexture;
 export let earthTextureLow: WebGLTexture;
+export let moonTextureLow: WebGLTexture;
 export let cloudTexture: WebGLTexture;
 
 export let skyboxTexture: WebGLTexture;
@@ -17,6 +20,8 @@ export let emptyTexture: WebGLTexture;
 export let icosphereModel: Model;
 export let skyboxModel: Model;
 
+export let planeModel: Model;
+
 export function initAssets(gl: WebGL2RenderingContext) {
     mercuryTexture = loadTexture("assests/planets/mercury/day8k.jpg", gl, true);
     mercuryTextureLow = loadTexture("assests/planets/mercury/day.jpg", gl, true);
@@ -24,6 +29,7 @@ export function initAssets(gl: WebGL2RenderingContext) {
     venusTextureLow = loadTexture("assests/planets/venus/day.jpg", gl, true);
     earthTexture = loadTexture("assests/planets/earth/day8k.jpg", gl, true);
     earthTextureLow = loadTexture("assests/planets/earth/day.jpg", gl, true);
+    moonTextureLow = loadTexture("assests/planets/earth/moons/moon.jpg", gl, true);
     cloudTexture = loadTexture("assests/planets/earth/cloud.jpg", gl, true);
     
     skyboxTexture = loadTexture("assests/sky.jpg", gl, true);
@@ -50,6 +56,21 @@ export function initAssets(gl: WebGL2RenderingContext) {
     // addIcosehedron(skyVerts, skyUVs, skyIndices, 0, 0, 0, 1, 4, true);
 
     skyboxModel = new Model(gl, icoVerts, icoUVs, skyIndices, false, icoVerts);
+
+    planeModel = new Model(gl, [
+        -1, 1, 0,
+        1, 1, 0,
+        1, -1, 0,
+        -1, -1, 0
+    ], [
+        0, 0,
+        1, 0,
+        1, 1,
+        0, 1
+    ], [
+        0, 2, 1,
+        0, 3, 2
+    ], false);
 }
 
 function indexOfPoint(list: vec3[], point: vec3, minDist = 0.001): number {

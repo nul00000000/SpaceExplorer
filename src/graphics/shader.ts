@@ -138,10 +138,10 @@ export abstract class BaseShader {
 export class Shader extends BaseShader {
 	constructor(gl: WebGL2RenderingContext, setupCallback: () => void) {
 		super(gl, "shader", ["position", "normal", "uvs", "tangent", "bitangent"], 
-				["transform", "camera", "projection", "lightDir", 
+				["transform", "camera", "projection", "lightPos", "lightColor", "lightBlocker", "displayMode",
 				"overlayTex", "tex"], () => {
-			gl.uniform1i(this.uniforms[4], 0);
-			gl.uniform1i(this.uniforms[5], 1);
+			gl.uniform1i(this.uniforms[7], 0);
+			gl.uniform1i(this.uniforms[8], 1);
 			console.log("Main shader initialized");
 			setupCallback();
 		});
@@ -151,22 +151,35 @@ export class Shader extends BaseShader {
 		this.gl.uniformMatrix4fv(this.uniforms[0], false, transform as Float32List);
 	}
 
-	loadCamera(transform: mat4) {
-		this.gl.uniformMatrix4fv(this.uniforms[1], false, transform as Float32List);
+	loadCamera(camera: mat4) {
+		this.gl.uniformMatrix4fv(this.uniforms[1], false, camera as Float32List);
 	}
 
-	loadProjection(transform: mat4) {
-		this.gl.uniformMatrix4fv(this.uniforms[2], false, transform as Float32List);
+	loadProjection(proj: mat4) {
+		this.gl.uniformMatrix4fv(this.uniforms[2], false, proj as Float32List);
 	}
 
-	loadLightDirection(lightDir: vec3) {
-		this.gl.uniform3fv(this.uniforms[3], vec3.normalize(lightDir, lightDir) as Float32List);
+	loadLightPos(lightPos: vec3) {
+		this.gl.uniform3fv(this.uniforms[3], lightPos as Float32List);
+	}
+
+	loadLightColor(lightColor: vec3) {
+		this.gl.uniform3fv(this.uniforms[4], lightColor as Float32List);
+	}
+
+	loadLightBlocker(lightBlockerPos: vec3, lightBlockerRad: number) {
+		this.gl.uniform4fv(this.uniforms[5], 
+			[lightBlockerPos[0], lightBlockerPos[1], lightBlockerPos[2], lightBlockerRad]);
+	}
+
+	loadDisplayMode(mode: number) {
+		this.gl.uniform1i(this.uniforms[6], mode);
 	}
 }
 
-export class WaterShader extends BaseShader {
+export class UIShader extends BaseShader {
 	constructor(gl: WebGL2RenderingContext, setupCallback: () => void) {
-		super(gl, "water", ["position", "normal", "uvs"], ["transform", "camera", "projection", 
+		super(gl, "ui", ["position", "normal", "uvs"], ["transform", "camera", "projection", 
 				"lightDir", "time", "lightSpaceLand",
 				"overlayTex", "tex"], () => {
 			gl.uniform1i(this.uniforms[6], 0);

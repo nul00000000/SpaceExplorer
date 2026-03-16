@@ -9,18 +9,45 @@ in mat3 TBN;
 
 out vec4 fragColor;
 
-uniform vec3 lightDir;
+uniform vec3 lightPos;
+uniform vec3 lightColor;
 uniform sampler2D overlayTex;
 uniform sampler2D tex;
 
+uniform vec4 lightBlocker;
+
+uniform int displayMode;
+
+float calculateShadow() {
+    vec3 lightToBlocker = lightPos - lightBlocker.xyz;
+    float lightToBlockerDist = length(lightToBlocker);
+    vec3 lightToBlockerDir = lightToBlocker / lightToBlockerDist;
+
+    float thisDot = dot(lightToBlockerDir, fragPos - lightBlocker.xyz);
+
+    if(thisDot < 0.0 && distance(thisDot * lightToBlockerDir + lightBlocker.xyz, fragPos) < lightBlocker.w) {
+        return 0.0;
+    } else {
+        return 1.0;
+    }
+}
+
 void main(void) {
+
+    vec4 clouds = texture(overlayTex, uvCoords);
+    vec4 baseColor = texture(tex, uvCoords);
+    vec4 color = mix(baseColor, vec4(1.0), clouds.r);
 
     vec3 nNormal = normalize(pNormal);
 
-    float illumination = 0.05 + max(0.0, -dot(lightDir, nNormal)) * 0.95;
+    vec3 lightVec = fragPos - lightPos;
+    vec3 illumination;
+    if(displayMode == 0) {
+        illumination = vec3(0.05) + max(0.0, -dot(normalize(lightVec), nNormal)) * 0.95 / dot(lightVec, lightVec)
+            * lightColor * calculateShadow();
+    } else {
+        illumination = vec3(1.0);
+    }
 
-    vec4 clouds = texture(overlayTex, uvCoords);
-    vec3 color = mix(texture(tex, uvCoords).rgb, vec3(1.0), clouds.r);
-
-    fragColor = vec4(illumination * color, 1.0);
+    fragColor = vec4(illumination * color.rgb, color.a);
 }

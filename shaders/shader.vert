@@ -20,11 +20,7 @@ uniform mat4 projection;
 
 void main(void) {
 	fragPos = vec3(transform * vec4(position, 1.0));
-	// if(guiMode) {
-	// 	gl_Position = camera * transform * vec4(position * vec3(1, 1.7777, 0), 1.0);
-	// } else {
-		gl_Position = projection * camera * vec4(fragPos, 1.0);
-	// }
+	gl_Position = projection * camera * vec4(fragPos, 1.0);
     uvCoords = uvs;
 	pNormal = normalize(vec3(transform * vec4(normal, 0.0)));
 	TBN = mat3(vec3(transform * vec4(tangent, 0.0)), vec3(transform * vec4(bitangent, 0.0)), pNormal);

@@ -1,20 +1,21 @@
 import { mat4, vec3 } from "gl-matrix";
-import { Shader, BaseShader, WaterShader, MainShader } from "./graphics/shader";
+import { Shader, BaseShader, UIShader, MainShader } from "./graphics/shader";
 import * as assets from "./graphics/assets";
 import * as xr from "./graphics/xr";
 import { Planet } from "./world/planet";
+import * as ui from "./world/ui";
 
 let gl: WebGL2RenderingContext;
 let canvas: HTMLCanvasElement;
 
 let shader: Shader;
 
-let waterShader: WaterShader;
+let uiShader: UIShader;
 
 let mainShader: MainShader;
 
-let cameraPos: vec3 = [9, 11, 1];
-let cameraYaw: number = 0;
+let cameraPos: vec3 = [0, 0, 0];
+let cameraYaw: number = 3.14159;
 let cameraPitch: number = 0;
 
 let keys: {[id: string] : boolean} = {};
@@ -22,6 +23,7 @@ let keys: {[id: string] : boolean} = {};
 let mercury: Planet;
 let venus: Planet;
 let earth: Planet;
+let moon: Planet;
 
 function init() {
 	shader.use();
@@ -30,16 +32,20 @@ function init() {
 
 	mercury = new Planet("Mercury", 1, 0, 0.5, 
 		assets.mercuryTexture, assets.mercuryTextureLow);
-	mercury.x = 0;
-	mercury.y = 10;
+	mercury.x = -3;
+	mercury.y = 0;
+	mercury.z = 5;
 	venus = new Planet("Venus", 1, 0, 0.5, 
 		assets.venusTexture, assets.venusTextureLow);
-	venus.x = 3;
-	venus.y = 10;
+	venus.x = 0;
+	venus.y = 0;
+	venus.z = 5;
 	earth = new Planet("Earth", 1, 23.44 * Math.PI / 180, 0.5, 
 		assets.earthTexture, assets.earthTextureLow, assets.cloudTexture);
-	earth.x = 6;
-	earth.y = 10;
+	earth.x = 3;
+	earth.y = 0;
+	earth.z = 5;
+	moon = new Planet("Moon", 0.3, 0, 0.2, assets.moonTextureLow);
 
 	let fov = 45 * Math.PI / 180; //this has been vertical fov the whole time
 	let aspect = (gl.canvas as HTMLCanvasElement).clientWidth / (gl.canvas as HTMLCanvasElement).clientHeight;
@@ -50,11 +56,14 @@ function init() {
 	mat4.perspective(projection, fov, aspect, zNear, zFar);
 	shader.loadProjection(projection);
 
-	setLightTowardsCenter([1, 0, 0]);
+	shader.loadLightPos([0, 0, 0]);
+	shader.loadLightColor([50, 50, 50]);
 
-	waterShader.use();
-	waterShader.loadProjection(projection);
+	uiShader.use();
+	uiShader.loadProjection(projection);
 
+	ui.initUI(gl);
+	ui.planets.push(mercury, venus, earth, moon);
 
 	mainShader.use();
 	mainShader.loadProjection(projection);
@@ -63,10 +72,17 @@ function init() {
 	if(!xr.xrStarted) window.requestAnimationFrame(loop);
 }
 
-function update(delta: number) {
+function update(delta: number, time: number) {
+	ui.update(delta, time);
+
 	mercury.update(delta);
 	venus.update(delta);
 	earth.update(delta);
+
+	moon.update(delta);
+	moon.x = earth.x + Math.cos(-moon.a) * 3;
+	moon.y = earth.y;
+	moon.z = earth.z + Math.sin(-moon.a) * 3;
 
 	let speed = 2;
 	if(keys["KeyD"]) {
@@ -92,7 +108,26 @@ function update(delta: number) {
 function renderFloor(shader: BaseShader) {
 	mercury.draw(shader, cameraPos);
 	venus.draw(shader, cameraPos);
+	(shader as Shader).loadLightBlocker([moon.x, moon.y, moon.z], moon.radius);
 	earth.draw(shader, cameraPos);
+
+	(shader as Shader).loadLightBlocker([earth.x, earth.y, earth.z], earth.radius);
+	moon.draw(shader, cameraPos);
+	(shader as Shader).loadLightBlocker([earth.x, earth.y, earth.z], 0);
+}
+
+function renderUI(shader: BaseShader) {
+	let test = mat4.create();
+	mat4.rotateY(test, test, cameraYaw);
+	mat4.rotateX(test, test, cameraPitch);
+
+	let test2 = vec3.transformMat4([0, 0, 0], [0, 1, 0], test);
+
+	ui.draw(shader, cameraPos, test2);
+}
+
+function renderUIXR(shader: BaseShader, camPos: vec3) {
+	ui.draw(shader, camPos, [0, 1, 0]);
 }
 
 function renderMain(shader: BaseShader) {
@@ -114,7 +149,6 @@ function draw(gl: WebGL2RenderingContext) {
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-	shader.use();
 	gl.viewport(0, 0, canvas.width, canvas.height);
 	
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -128,14 +162,17 @@ function draw(gl: WebGL2RenderingContext) {
 	mat4.rotateY(camera, camera, cameraYaw);
 	mat4.rotateX(camera, camera, cameraPitch);
 	mat4.invert(camera, camera);
-	shader.loadCamera(camera);
-
-	renderFloor(shader);
-
+	
 	mainShader.use();
 	mainShader.loadCamera(camera);
-
 	renderMain(mainShader);
+	
+	shader.use();
+	shader.loadCamera(camera);
+	renderFloor(shader);
+
+	renderUI(shader);
+
 }
 
 function drawXR(gl: WebGL2RenderingContext, viewRef: XRReferenceSpace, frame: XRFrame) {
@@ -159,38 +196,28 @@ function drawXR(gl: WebGL2RenderingContext, viewRef: XRReferenceSpace, frame: XR
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	
 	for(const view of viewerPose.views) {
-		shader.use();
 		const viewport = session.renderState.baseLayer.getViewport(view);
 		gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-
+		
+		mainShader.use();
+		mainShader.loadCamera(view.transform.inverse.matrix);
+		mainShader.loadProjection(view.projectionMatrix);
+		renderMain(mainShader);
+		
+		shader.use();
 		shader.loadCamera(view.transform.inverse.matrix);
 		shader.loadProjection(view.projectionMatrix);
 
 		renderFloor(shader);
-
-		mainShader.use();
-		mainShader.loadCamera(view.transform.inverse.matrix);
-		mainShader.loadProjection(view.projectionMatrix);
-
-		renderMain(mainShader);
+		renderUIXR(shader, [view.transform.position.x, view.transform.position.y, view.transform.position.z]);
 	}
 }
 
 let lastTimestamp: number = 0;
 
-function setLightTowardsCenter(lightPos: vec3) {
-	shader.use();
-	shader.loadLightDirection([-lightPos[0], -lightPos[1], -lightPos[2]]);
-	waterShader.use();
-	waterShader.loadLightDirection([-lightPos[0], -lightPos[1], -lightPos[2]]);
-
-	mainShader.use();
-	mainShader.loadLightDirection([-lightPos[0], -lightPos[1], -lightPos[2]]);
-}
-
 function loopXR(timestamp: number, frame: XRFrame) {
 	let delta = timestamp - lastTimestamp;
-	update(delta * 0.001);
+	update(delta * 0.001, timestamp * 0.001);
 	drawXR(gl, xr.xrRefSpace, frame);
 	frame.session.requestAnimationFrame(loopXR);
 	lastTimestamp = timestamp;
@@ -198,7 +225,7 @@ function loopXR(timestamp: number, frame: XRFrame) {
 
 function loop(timestamp: number) {
 	let delta = timestamp - lastTimestamp;
-	update(delta * 0.001);
+	update(delta * 0.001, timestamp * 0.001);
 	draw(gl);
 	if(!xr.xrStarted) window.requestAnimationFrame(loop);
 	lastTimestamp = timestamp;
@@ -227,7 +254,7 @@ function main() {
 
 	shader = new Shader(gl, () => {
 		mainShader = new MainShader(gl, () => {
-			waterShader = new WaterShader(gl, init);
+			uiShader = new UIShader(gl, init);
 		});
 	});
 }
