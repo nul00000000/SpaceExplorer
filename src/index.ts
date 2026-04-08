@@ -5,6 +5,8 @@ import * as xr from "./graphics/xr";
 import { Planet } from "./world/planet";
 import * as ui from "./world/ui";
 
+import * as world from "./world/world"
+
 let gl: WebGL2RenderingContext;
 let canvas: HTMLCanvasElement;
 
@@ -20,32 +22,12 @@ let cameraPitch: number = 0;
 
 let keys: {[id: string] : boolean} = {};
 
-let mercury: Planet;
-let venus: Planet;
-let earth: Planet;
-let moon: Planet;
-
 function init() {
 	shader.use();
 
 	assets.initAssets(gl);
 
-	mercury = new Planet("Mercury", 1, 0, 0.5, 
-		assets.mercuryTexture, assets.mercuryTextureLow);
-	mercury.x = -3;
-	mercury.y = 0;
-	mercury.z = 5;
-	venus = new Planet("Venus", 1, 0, 0.5, 
-		assets.venusTexture, assets.venusTextureLow);
-	venus.x = 0;
-	venus.y = 0;
-	venus.z = 5;
-	earth = new Planet("Earth", 1, 23.44 * Math.PI / 180, 0.5, 
-		assets.earthTexture, assets.earthTextureLow, assets.cloudTexture);
-	earth.x = 3;
-	earth.y = 0;
-	earth.z = 5;
-	moon = new Planet("Moon", 0.3, 0, 0.2, assets.moonTextureLow);
+	world.loadPlanets("assests/planetData.json", gl);
 
 	let fov = 45 * Math.PI / 180; //this has been vertical fov the whole time
 	let aspect = (gl.canvas as HTMLCanvasElement).clientWidth / (gl.canvas as HTMLCanvasElement).clientHeight;
@@ -57,13 +39,13 @@ function init() {
 	shader.loadProjection(projection);
 
 	shader.loadLightPos([0, 0, 0]);
-	shader.loadLightColor([50, 50, 50]);
+	shader.loadLightColor([10, 10, 10]);
 
 	uiShader.use();
 	uiShader.loadProjection(projection);
 
 	ui.initUI(gl);
-	ui.planets.push(mercury, venus, earth, moon);
+	world.addPlanetsToUI();
 
 	mainShader.use();
 	mainShader.loadProjection(projection);
@@ -74,15 +56,7 @@ function init() {
 
 function update(delta: number, time: number) {
 	ui.update(delta, time);
-
-	mercury.update(delta);
-	venus.update(delta);
-	earth.update(delta);
-
-	moon.update(delta);
-	moon.x = earth.x + Math.cos(-moon.a) * 3;
-	moon.y = earth.y;
-	moon.z = earth.z + Math.sin(-moon.a) * 3;
+	world.update(delta, time);
 
 	let speed = 2;
 	if(keys["KeyD"]) {
@@ -106,14 +80,8 @@ function update(delta: number, time: number) {
 }
 
 function renderFloor(shader: BaseShader) {
-	mercury.draw(shader, cameraPos);
-	venus.draw(shader, cameraPos);
-	(shader as Shader).loadLightBlocker([moon.x, moon.y, moon.z], moon.radius);
-	earth.draw(shader, cameraPos);
-
-	(shader as Shader).loadLightBlocker([earth.x, earth.y, earth.z], earth.radius);
-	moon.draw(shader, cameraPos);
-	(shader as Shader).loadLightBlocker([earth.x, earth.y, earth.z], 0);
+	world.draw(shader, cameraPos);
+	// (shader as Shader).loadLightBlocker([moon.x, moon.y, moon.z], moon.radius);
 }
 
 function renderUI(shader: BaseShader) {

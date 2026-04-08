@@ -1,6 +1,9 @@
 import { Model } from "./model";
 import { vec3, mat3, vec2 } from "gl-matrix";
 
+export let sunTexture: WebGLTexture;
+export let sunTextureLow: WebGLTexture;
+
 export let mercuryTexture: WebGLTexture;
 export let mercuryTextureLow: WebGLTexture;
 
@@ -18,11 +21,14 @@ export let testTexture: WebGLTexture;
 export let emptyTexture: WebGLTexture;
 
 export let icosphereModel: Model;
+export let icosphereReverseModel: Model;
 export let skyboxModel: Model;
 
 export let planeModel: Model;
 
 export function initAssets(gl: WebGL2RenderingContext) {
+	sunTexture = loadTexture("assests/sun/day.jpg", gl, true);
+	sunTextureLow = loadTexture("assests/sun/day8k.jpg", gl, true);
     mercuryTexture = loadTexture("assests/planets/mercury/day8k.jpg", gl, true);
     mercuryTextureLow = loadTexture("assests/planets/mercury/day.jpg", gl, true);
     venusTexture = loadTexture("assests/planets/venus/day8k.jpg", gl, true);
@@ -32,7 +38,7 @@ export function initAssets(gl: WebGL2RenderingContext) {
     moonTextureLow = loadTexture("assests/planets/earth/moons/moon.jpg", gl, true);
     cloudTexture = loadTexture("assests/planets/earth/cloud.jpg", gl, true);
     
-    skyboxTexture = loadTexture("assests/sky.jpg", gl, true);
+    skyboxTexture = loadTexture("assests/sky.jpg", gl, true, true);
     
     testTexture = loadTexture("assests/planets/test.png", gl, true);
     emptyTexture = loadTexture("assests/planets/empty.png", gl, true);
@@ -52,8 +58,6 @@ export function initAssets(gl: WebGL2RenderingContext) {
     for(let i = 0; i < icoIndices.length / 3; i++) {
         skyIndices.push(icoIndices[i * 3], icoIndices[i * 3 + 2], icoIndices[i * 3 + 1]);
     }
-
-    // addIcosehedron(skyVerts, skyUVs, skyIndices, 0, 0, 0, 1, 4, true);
 
     skyboxModel = new Model(gl, icoVerts, icoUVs, skyIndices, false, icoVerts);
 
@@ -371,14 +375,14 @@ function addIcosehedron(vertices: number[], uvs: number[], indices: number[], x:
     
 // }
 
-function loadTexture(path: string, gl: WebGL2RenderingContext, wrap = false) {
+export function loadTexture(path: string, gl: WebGL2RenderingContext, wrap = false, linear = false) {
     let tex = new Image();
     let glTex = gl.createTexture();
     tex.onload = () => {
         gl.bindTexture(gl.TEXTURE_2D, glTex);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, linear ? gl.LINEAR : gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, linear ? gl.LINEAR : gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap ? gl.REPEAT : gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap ? gl.REPEAT : gl.CLAMP_TO_EDGE);
         gl.generateMipmap(gl.TEXTURE_2D);

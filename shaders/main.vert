@@ -21,6 +21,7 @@ uniform mat4 projection;
 void main(void) {
 	fragPos = vec3(transform * vec4(position, 1.0));
 	gl_Position = projection * vec4((camera * vec4(fragPos, 0.0)).xyz, 1.0);
+	//gl_Position = projection * vec4((vec4(fragPos, 0.0)).xyz, 1.0);
     uvCoords = uvs;
 	pNormal = vec3(transform * vec4(normal, 0.0));
 	TBN = mat3(vec3(transform * vec4(tangent, 0.0)), vec3(transform * vec4(bitangent, 0.0)), pNormal);

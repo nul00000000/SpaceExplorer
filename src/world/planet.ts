@@ -1,6 +1,28 @@
 import { mat4, vec3 } from "gl-matrix";
 import * as assets from "../graphics/assets";
-import { BaseShader } from "../graphics/shader";
+import { BaseShader, Shader } from "../graphics/shader";
+
+export type PlanetData = {
+    name: string,
+    type: string,
+    mass_earth: number,
+    diameter_earth: number,
+    orbit_radius_earth: number,
+    body_it_orbits: string,
+    bodies_that_orbit: string[],
+    gravity_earth: number,
+    rotation_days: number,
+    revolution_years: number,
+    pressure_earth: number,
+    temperature_f: number,
+    age_billion_years: number,
+    tilt_deg: number,
+    description: string,
+    colors: string[],
+    texture: string,
+    textureLow: string,
+    textureOverlay: string
+};
 
 export class Planet {
     name: string;
@@ -16,8 +38,15 @@ export class Planet {
     z: number;
     a: number;
 
+    orbiting: Planet;
+    orbitRadius: number;
+    orbitSpeed: number;
+	
+	lightEmitting: boolean = false;
+
     constructor(name: string, radius: number, tilt: number, rotSpeed: number, 
-            texture = assets.testTexture, lowTexture = texture, overlayTexture = assets.emptyTexture) {
+            texture = assets.testTexture, lowTexture = texture,
+            orbiting?: Planet, orbitRadius?: number, orbitSpeed?: number, overlayTexture = assets.emptyTexture) {
         this.name = name;
         this.radius = radius;
         this.texture = texture;
@@ -29,10 +58,18 @@ export class Planet {
         this.tilt = tilt;
         this.rotSpeed = rotSpeed;
         this.a = 0;
+        this.orbiting = orbiting;
+        this.orbitRadius = orbitRadius;
+        this.orbitSpeed = orbitSpeed;
     }
 
-    update(delta: number) {
-        this.a += this.rotSpeed * delta;
+    update(delta: number, time: number) {
+        this.a = time * this.rotSpeed;
+        if(this.orbiting) {
+            this.x = this.orbiting.x + Math.cos(time * this.orbitSpeed) * this.orbitRadius;
+            this.y = this.orbiting.y;
+            this.z = this.orbiting.z + Math.sin(time * this.orbitSpeed) * this.orbitRadius;
+        }
     }
 
     draw(shader: BaseShader, cameraPos: vec3) {
@@ -46,9 +83,10 @@ export class Planet {
         shader.loadTexture(this.overlayTexture, 0);
         shader.loadTexture(
             vec3.dist(cameraPos, [this.x, this.y, this.z]) < this.radius * 2 ? this.texture : this.textureLow, 1);
+		
+		if(this.lightEmitting) (shader as Shader).loadDisplayMode(1);
 
         assets.icosphereModel.draw(shader);
-        
-        assets.icosphereModel.draw(shader);
+		(shader as Shader).loadDisplayMode(0);
     }
 }

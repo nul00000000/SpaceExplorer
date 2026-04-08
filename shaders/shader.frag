@@ -25,11 +25,18 @@ float calculateShadow() {
 
     float thisDot = dot(lightToBlockerDir, fragPos - lightBlocker.xyz);
 
-    if(thisDot < 0.0 && distance(thisDot * lightToBlockerDir + lightBlocker.xyz, fragPos) < lightBlocker.w) {
-        return 0.0;
-    } else {
-        return 1.0;
-    }
+	float dist = distance(thisDot * lightToBlockerDir + lightBlocker.xyz, fragPos); 
+	if(thisDot < 0.0) {
+		if(dist < lightBlocker.w * 0.5) {
+			return 0.0;
+		} else if(dist < lightBlocker.w * 1.5) {
+			return dist / lightBlocker.w - 0.5;
+		} else {
+			return 1.0;
+		}
+	} else {
+		return 1.0;
+	}
 }
 
 void main(void) {
