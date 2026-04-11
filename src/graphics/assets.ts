@@ -26,6 +26,8 @@ export let skyboxModel: Model;
 
 export let planeModel: Model;
 
+export let cubeModel: Model;
+
 export function initAssets(gl: WebGL2RenderingContext) {
 	sunTexture = loadTexture("assests/sun/day.jpg", gl, true);
 	sunTextureLow = loadTexture("assests/sun/day8k.jpg", gl, true);
@@ -75,6 +77,39 @@ export function initAssets(gl: WebGL2RenderingContext) {
         0, 2, 1,
         0, 3, 2
     ], false);
+
+	cubeModel = new Model(gl, [
+		-1, 1, -1, //top left front
+		1, 1, -1, //top right front
+		1, -1, -1, //bottom right front
+		-1, -1, -1, //bottom left front
+		-1, 1, 1, //top left back
+		1, 1, 1, //top right back
+		1, -1, 1, //bottom right back
+		-1, -1, 1 //bottom left back
+	], [
+		0, 0,
+		1, 0,
+		1, 1,
+		0, 1,
+		1, 0,
+		0, 0,
+		0, 1,
+		1, 1,
+	], [
+		0, 1, 2,
+		0, 2, 3,
+		1, 5, 6,
+		1, 6, 2,
+		4, 6, 5,
+		4, 7, 6,
+		4, 0, 3,
+		4, 3, 7,
+		4, 5, 1,
+		4, 1, 0,
+		3, 2, 6,
+		3, 6, 7
+	], false);
 }
 
 function indexOfPoint(list: vec3[], point: vec3, minDist = 0.001): number {

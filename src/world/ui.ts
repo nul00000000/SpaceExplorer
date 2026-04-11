@@ -39,6 +39,10 @@ export function draw(shader: BaseShader, cameraPos: vec3, cameraUp: vec3) {
     });
 
     for(let p of planets) {
+		if(vec3.dist([p.x, p.y, p.z], cameraPos) > 40 && !p.hovered) {
+			continue;
+		}
+
         uiCtx.clearRect(0, 0, 512, 512);
 
         uiCtx.fillStyle = "white";
@@ -71,7 +75,7 @@ export function draw(shader: BaseShader, cameraPos: vec3, cameraUp: vec3) {
         // let look = mat4.create();
         let rot = mat4.create();
         mat4.rotateY(rot, rot, 3.14159);
-        mat4.scale(trans, trans, [p.radius * 2.1, p.radius * 2.1, p.radius * 2.1]);
+        mat4.scale(trans, trans, [p.effectiveRadius * 2.1, p.effectiveRadius * 2.1, p.effectiveRadius * 2.1]);
         mat4.translate(rot, rot, [0, 0.5, 0]);
         // mat4.scale(look, look, [p.radius * 2.4, p.radius * 2.4, p.radius * 2.4]);
         // mat4.translate(look, look, [0, 0.5, 0]);

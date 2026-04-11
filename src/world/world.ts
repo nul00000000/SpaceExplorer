@@ -6,13 +6,13 @@ import { vec3 } from "gl-matrix";
 
 let planets: Planet[] = [];
 
-let radiusScale = 1;
-let orbitRadiusScale = 1e-9;
-let moonOrbitRadiusScale = 0.5e-7;
+let radiusScale = 1 * 10;
+let orbitRadiusScale = 1e-9 * 10;
+let moonOrbitRadiusScale = 0.5e-7 * 10;
 
 let sunRadiusScale = 0.1;
 
-let timeScale = 0.001;
+let timeScale = 0.01;
 
 function findPlanetByName(name: string): Planet {
     for(let p of planets) {
@@ -51,6 +51,7 @@ export function loadPlanets(path: string, gl: WebGL2RenderingContext) {
                 for(let pd of data) {
                     addPlanet(pd, gl);
                 }
+				addPlanetsToUI();
                 console.log(planets);
             } else {
                 alert("planet data couldn't load :(");
@@ -68,6 +69,34 @@ export function update(delta: number, time: number) {
     for(let p of planets) {
         p.update(delta, time);
     }
+}
+
+export function updateSelection(handPos: vec3, handDir: vec3): [number, Planet] {
+	let closest: Planet = null;
+	let closestDist: number = 1000;
+	for(let p of planets) {
+		let x1: vec3 = handPos;
+		let x2: vec3 = vec3.add(vec3.create(), handPos, handDir);
+		let x0: vec3 = [p.x, p.y, p.z];
+
+		let x0x1: vec3 = vec3.sub(vec3.create(), x0, x1);
+		let x0x2: vec3 = vec3.sub(vec3.create(), x0, x2);
+		let x2x1: vec3 = vec3.sub(vec3.create(), x2, x1);
+
+		let c: vec3 = vec3.cross(vec3.create(), x0x1, x0x2);
+
+		let dist = vec3.len(c) / vec3.len(x2x1);
+
+		if(dist < p.effectiveRadius) {
+			if(vec3.len(x0x1) < closestDist) {
+				closest = p;
+				closestDist = vec3.len(x0x1);
+			}
+		}
+		p.hovered = false;
+	}
+	if(closest) closest.hovered = true;
+	return [closestDist, closest];
 }
 
 export function draw(shader: BaseShader, camPos: vec3) {

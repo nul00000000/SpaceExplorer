@@ -38,6 +38,9 @@ export class Planet {
     z: number;
     a: number;
 
+	hovered: boolean = false;
+	effectiveRadius: number;
+
     orbiting: Planet;
     orbitRadius: number;
     orbitSpeed: number;
@@ -49,6 +52,7 @@ export class Planet {
             orbiting?: Planet, orbitRadius?: number, orbitSpeed?: number, overlayTexture = assets.emptyTexture) {
         this.name = name;
         this.radius = radius;
+		this.effectiveRadius = radius;
         this.texture = texture;
         this.overlayTexture = overlayTexture;
         this.textureLow = lowTexture;
@@ -70,6 +74,16 @@ export class Planet {
             this.y = this.orbiting.y;
             this.z = this.orbiting.z + Math.sin(time * this.orbitSpeed) * this.orbitRadius;
         }
+		if(this.name.toLowerCase() != "sun") {
+			let exp = Math.pow(0.3, delta);
+			if(this.hovered) {
+				this.effectiveRadius = this.effectiveRadius * exp + this.radius * 5 * (1 - exp);
+			} else {
+				this.effectiveRadius = this.effectiveRadius * exp + this.radius * (1 - exp);
+			}
+		} else {
+			this.effectiveRadius = this.radius;
+		}
     }
 
     draw(shader: BaseShader, cameraPos: vec3) {
@@ -77,14 +91,14 @@ export class Planet {
         mat4.translate(transform, transform, [this.x, this.y, this.z]);
         mat4.rotateZ(transform, transform, this.tilt);
         mat4.rotateY(transform, transform, this.a);
-        mat4.scale(transform, transform, [this.radius, this.radius, this.radius]);
-        
+        mat4.scale(transform, transform, [this.effectiveRadius, this.effectiveRadius, this.effectiveRadius]);
+
         shader.loadTransform(transform);
         shader.loadTexture(this.overlayTexture, 0);
         shader.loadTexture(
             vec3.dist(cameraPos, [this.x, this.y, this.z]) < this.radius * 2 ? this.texture : this.textureLow, 1);
 		
-		if(this.lightEmitting) (shader as Shader).loadDisplayMode(1);
+		if(this.lightEmitting || this.hovered) (shader as Shader).loadDisplayMode(1);
 
         assets.icosphereModel.draw(shader);
 		(shader as Shader).loadDisplayMode(0);
